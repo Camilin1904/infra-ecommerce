@@ -1,0 +1,382 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - terraform/
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - terraform/
+
+variables:
+  # Terraform version
+  TERRAFORM_VERSION: '1.6.6'
+  
+  # Azure service connection (configure in Azure DevOps)
+  AZURE_SERVICE_CONNECTION: 'azure-service-connection'
+  
+  # Terraform state storage (update with your actual values)
+  TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'terraformstatestorage'
+  TERRAFORM_BACKEND_CONTAINER: 'tfstate'
+  TERRAFORM_BACKEND_RESOURCE_GROUP: 'rg-terraform-state'
+
+stages:
+  #############################################################################
+  # BUILD AND VALIDATE STAGE
+  #############################################################################
+  - stage: Build_And_Validate
+    displayName: 'Build and Validate'
+    jobs:
+      - job: Validate_Terraform
+        displayName: 'Validate Terraform Configuration'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(TERRAFORM_VERSION)
+
+          - task: AzureCLI@2
+            displayName: 'Validate Dev Environment'
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform/envs/dev
+                terraform init -backend=false
+                terraform validate
+                terraform fmt -check=true
+
+          - task: AzureCLI@2
+            displayName: 'Validate Stage Environment'
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform/envs/stage
+                terraform init -backend=false
+                terraform validate
+                terraform fmt -check=true
+
+          - task: AzureCLI@2
+            displayName: 'Validate Prod Environment'
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform/envs/prod
+                terraform init -backend=false
+                terraform validate
+                terraform fmt -check=true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Validation Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/terraform-validation-*.xml'
+              mergeTestResults: true
+              testRunTitle: 'Terraform Validation'
+
+      - job: Security_Scan
+        displayName: 'Security Scan'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(TERRAFORM_VERSION)
+
+          # Install Checkov for security scanning
+          - script: |
+              pip install checkov
+            displayName: 'Install Checkov'
+
+          - script: |
+              checkov --framework terraform --directory terraform/ --output cli --output junitxml --output-file-path console,checkov-report.xml
+            displayName: 'Run Checkov Security Scan'
+            continueOnError: true
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Security Scan Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: 'checkov-report.xml'
+              testRunTitle: 'Terraform Security Scan'
+
+  #############################################################################
+  # DEVELOPMENT ENVIRONMENT
+  #############################################################################
+  - stage: Deploy_Dev
+    displayName: 'Deploy to Development'
+    dependsOn: Build_And_Validate
+    condition: and(succeeded(), or(eq(variables['Build.SourceBranch'], 'refs/heads/develop'), eq(variables['Build.SourceBranch'], 'refs/heads/main')))
+    jobs:
+      - deployment: Deploy_Dev_Infrastructure
+        displayName: 'Deploy Dev Infrastructure'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'development'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout repository'
+
+                - task: TerraformInstaller@1
+                  displayName: 'Install Terraform'
+                  inputs:
+                    terraformVersion: $(TERRAFORM_VERSION)
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Init Dev'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/dev'
+                    inlineScript: |
+                      terraform init \
+                        -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
+                        -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
+                        -backend-config="resource_group_name=$(TERRAFORM_BACKEND_RESOURCE_GROUP)" \
+                        -backend-config="key=dev/terraform.tfstate"
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Plan Dev'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/dev'
+                    inlineScript: |
+                      # Create terraform.tfvars for automated deployment
+                      cat > terraform.tfvars << EOF
+                      create_resource_group = true
+                      resource_group_location = "East US"
+                      EOF
+                      
+                      terraform plan -out=tfplan-dev -var-file=terraform.tfvars
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Apply Dev'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/dev'
+                    inlineScript: |
+                      terraform apply -auto-approve tfplan-dev
+
+                - task: AzureCLI@2
+                  displayName: 'Output Dev Cluster Info'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/dev'
+                    inlineScript: |
+                      echo "Development AKS Cluster deployed successfully!"
+                      echo "Cluster Name: $(terraform output -raw aks_cluster_name)"
+                      echo "Resource Group: $(terraform output -raw resource_group_name)"
+                      echo "Cluster FQDN: $(terraform output -raw aks_cluster_fqdn)"
+
+  #############################################################################
+  # STAGING ENVIRONMENT
+  #############################################################################
+  - stage: Deploy_Stage
+    displayName: 'Deploy to Staging'
+    dependsOn: Deploy_Dev
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: Deploy_Stage_Infrastructure
+        displayName: 'Deploy Stage Infrastructure'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'staging'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout repository'
+
+                - task: TerraformInstaller@1
+                  displayName: 'Install Terraform'
+                  inputs:
+                    terraformVersion: $(TERRAFORM_VERSION)
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Init Stage'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/stage'
+                    inlineScript: |
+                      terraform init \
+                        -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
+                        -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
+                        -backend-config="resource_group_name=$(TERRAFORM_BACKEND_RESOURCE_GROUP)" \
+                        -backend-config="key=stage/terraform.tfstate"
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Plan Stage'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/stage'
+                    inlineScript: |
+                      # Create terraform.tfvars for automated deployment
+                      cat > terraform.tfvars << EOF
+                      create_resource_group = true
+                      resource_group_location = "East US"
+                      EOF
+                      
+                      terraform plan -out=tfplan-stage -var-file=terraform.tfvars
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Apply Stage'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/stage'
+                    inlineScript: |
+                      terraform apply -auto-approve tfplan-stage
+
+                - task: AzureCLI@2
+                  displayName: 'Output Stage Cluster Info'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/stage'
+                    inlineScript: |
+                      echo "Staging AKS Cluster deployed successfully!"
+                      echo "Cluster Name: $(terraform output -raw aks_cluster_name)"
+                      echo "Resource Group: $(terraform output -raw resource_group_name)"
+                      echo "Cluster FQDN: $(terraform output -raw aks_cluster_fqdn)"
+
+  #############################################################################
+  # PRODUCTION ENVIRONMENT
+  #############################################################################
+  - stage: Deploy_Prod
+    displayName: 'Deploy to Production'
+    dependsOn: Deploy_Stage
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: Deploy_Prod_Infrastructure
+        displayName: 'Deploy Production Infrastructure'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout repository'
+
+                - task: TerraformInstaller@1
+                  displayName: 'Install Terraform'
+                  inputs:
+                    terraformVersion: $(TERRAFORM_VERSION)
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Init Prod'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/prod'
+                    inlineScript: |
+                      terraform init \
+                        -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
+                        -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
+                        -backend-config="resource_group_name=$(TERRAFORM_BACKEND_RESOURCE_GROUP)" \
+                        -backend-config="key=prod/terraform.tfstate"
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Plan Prod'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/prod'
+                    inlineScript: |
+                      # Create terraform.tfvars for automated deployment
+                      cat > terraform.tfvars << EOF
+                      create_resource_group = true
+                      resource_group_location = "East US"
+                      EOF
+                      
+                      terraform plan -out=tfplan-prod -var-file=terraform.tfvars
+                      
+                      # Show plan for manual review
+                      echo "=== PRODUCTION DEPLOYMENT PLAN ==="
+                      terraform show tfplan-prod
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Apply Prod'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/prod'
+                    inlineScript: |
+                      terraform apply -auto-approve tfplan-prod
+
+                - task: AzureCLI@2
+                  displayName: 'Output Prod Cluster Info'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/prod'
+                    inlineScript: |
+                      echo "Production AKS Cluster deployed successfully!"
+                      echo "Cluster Name: $(terraform output -raw aks_cluster_name)"
+                      echo "Resource Group: $(terraform output -raw resource_group_name)"
+                      echo "Cluster FQDN: $(terraform output -raw aks_cluster_fqdn)"
+
+                - task: AzureCLI@2
+                  displayName: 'Post-Deployment Validation'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Get cluster credentials
+                      RESOURCE_GROUP=$(cd terraform/envs/prod && terraform output -raw resource_group_name)
+                      CLUSTER_NAME=$(cd terraform/envs/prod && terraform output -raw aks_cluster_name)
+                      
+                      az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$CLUSTER_NAME" --overwrite-existing
+                      
+                      # Validate cluster is healthy
+                      kubectl get nodes
+                      kubectl get pods --all-namespaces
+                      
+                      echo "Production cluster validation completed successfully!"

@@ -1,0 +1,133 @@
+trigger: none
+
+pr: none
+
+parameters:
+  - name: environment
+    displayName: 'Environment to destroy'
+    type: string
+    default: 'dev'
+    values:
+      - dev
+      - stage
+      - prod
+  - name: confirmDestroy
+    displayName: 'Type "DESTROY" to confirm (case sensitive)'
+    type: string
+    default: ''
+
+variables:
+  TERRAFORM_VERSION: '1.6.6'
+  AZURE_SERVICE_CONNECTION: 'azure-service-connection'
+  TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'terraformstatestorage'
+  TERRAFORM_BACKEND_CONTAINER: 'tfstate'
+  TERRAFORM_BACKEND_RESOURCE_GROUP: 'rg-terraform-state'
+
+stages:
+  - stage: Validate_Destroy_Request
+    displayName: 'Validate Destroy Request'
+    jobs:
+      - job: Validate
+        displayName: 'Validate Destroy Parameters'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - script: |
+              if [ "${{ parameters.confirmDestroy }}" != "DESTROY" ]; then
+                echo "##vso[task.logissue type=error]Confirmation text must be exactly 'DESTROY' (case sensitive)"
+                exit 1
+              fi
+              
+              if [ "${{ parameters.environment }}" == "prod" ]; then
+                echo "##vso[task.logissue type=warning]You are about to destroy the PRODUCTION environment!"
+                echo "This action is irreversible and will delete all production resources."
+              fi
+              
+              echo "Validation passed. Proceeding with destroy operation for environment: ${{ parameters.environment }}"
+            displayName: 'Validate Destroy Confirmation'
+
+  - stage: Destroy_Infrastructure
+    displayName: 'Destroy ${{ parameters.environment }} Infrastructure'
+    dependsOn: Validate_Destroy_Request
+    condition: succeeded()
+    jobs:
+      - deployment: Destroy_${{ parameters.environment }}
+        displayName: 'Destroy ${{ parameters.environment }} Infrastructure'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: '${{ parameters.environment }}-destroy'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  displayName: 'Checkout repository'
+
+                - task: TerraformInstaller@1
+                  displayName: 'Install Terraform'
+                  inputs:
+                    terraformVersion: $(TERRAFORM_VERSION)
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Init'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/${{ parameters.environment }}'
+                    inlineScript: |
+                      terraform init \
+                        -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
+                        -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
+                        -backend-config="resource_group_name=$(TERRAFORM_BACKEND_RESOURCE_GROUP)" \
+                        -backend-config="key=${{ parameters.environment }}/terraform.tfstate"
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Plan Destroy'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/${{ parameters.environment }}'
+                    inlineScript: |
+                      # Create terraform.tfvars if it doesn't exist
+                      if [ ! -f terraform.tfvars ]; then
+                        cat > terraform.tfvars << EOF
+                      create_resource_group = true
+                      resource_group_location = "East US"
+                      EOF
+                      fi
+                      
+                      terraform plan -destroy -out=tfplan-destroy-${{ parameters.environment }}
+                      
+                      echo "=== DESTROY PLAN FOR ${{ parameters.environment }} ==="
+                      terraform show tfplan-destroy-${{ parameters.environment }}
+
+                - task: AzureCLI@2
+                  displayName: 'Terraform Destroy'
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    workingDirectory: 'terraform/envs/${{ parameters.environment }}'
+                    inlineScript: |
+                      echo "Starting destruction of ${{ parameters.environment }} environment..."
+                      terraform apply -auto-approve tfplan-destroy-${{ parameters.environment }}
+                      echo "${{ parameters.environment }} environment destroyed successfully!"
+
+                - task: AzureCLI@2
+                  displayName: 'Cleanup State File'
+                  condition: succeededOrFailed()
+                  inputs:
+                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
+                    scriptType: 'bash'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      # Optional: Remove the state file after successful destroy
+                      # Uncomment the following lines if you want to clean up the state file
+                      # az storage blob delete \
+                      #   --account-name $(TERRAFORM_BACKEND_STORAGE_ACCOUNT) \
+                      #   --container-name $(TERRAFORM_BACKEND_CONTAINER) \
+                      #   --name "${{ parameters.environment }}/terraform.tfstate" \
+                      #   --auth-mode login
+                      echo "Destroy operation completed for ${{ parameters.environment }}"
