@@ -1,0 +1,52 @@
+# Example Terraform variables for development environment
+# Copy this file to terraform.tfvars and customize the values
+
+# Resource Group Configuration
+# Option 1: Create a new resource group (default behavior)
+create_resource_group = true
+resource_group_location = "East US"
+
+# Option 2: Use an existing resource group
+# Uncomment the following lines and comment out the above to use existing RG
+# create_resource_group = false
+# existing_resource_group_name = "rg-ecommerce-shared"
+
+# Optional: Specify Kubernetes version
+# kubernetes_version = "1.27.3"
+
+# Optional: Customize node pool settings
+# node_count = 2
+# vm_size = "Standard_D2s_v3"
+# min_node_count = 1
+# max_node_count = 5
+
+# Optional: Azure AD group for cluster admin access
+# admin_group_object_ids = ["12345678-1234-1234-1234-123456789012"]
+
+# Optional: Enable additional features
+# enable_azure_policy = true
+# enable_http_application_routing = false
+
+# Optional: Custom network configuration
+# service_cidr = "10.0.0.0/16"
+# dns_service_ip = "10.0.0.10"
+
+# Optional: Additional node pools
+# additional_node_pools = {
+#   "compute" = {
+#     vm_size             = "Standard_D4s_v3"
+#     node_count          = 2
+#     enable_auto_scaling = true
+#     min_count           = 1
+#     max_count           = 3
+#     os_disk_size_gb     = 50
+#     os_disk_type        = "Managed"
+#     node_labels = {
+#       "workload-type" = "compute"
+#     }
+#     node_taints = []
+#     tags = {
+#       "NodePool" = "compute"
+#     }
+#   }
+# }
