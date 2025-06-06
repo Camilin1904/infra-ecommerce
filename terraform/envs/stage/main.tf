@@ -1,20 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~>3.0"
-    }
-  }
-
-  backend "azurerm" {
-    storage_account_name = "tfstate1749162202"
-    container_name       = "tfstate"
-    resource_group_name  = "rg-terraform-state"
-    key                  = "stage/terraform.tfstate"
-  }
-}
-
 provider "azurerm" {
   features {}
 }
