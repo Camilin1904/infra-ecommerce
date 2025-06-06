@@ -37,7 +37,7 @@ module "resource_group" {
 # Local values to handle resource group reference
 locals {
   resource_group_name =  module.resource_group[0].name
-  resource_group_location = var.create_resource_group ? module.resource_group[0].location : data.azurerm_resource_group.existing[0].location
+  resource_group_location = module.resource_group[0].location
 }
 
 module "aks_cluster" {
