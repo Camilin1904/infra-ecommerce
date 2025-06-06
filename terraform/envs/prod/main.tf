@@ -8,7 +8,7 @@ terraform {
   }
   
   backend "azurerm" {
-    storage_account_name = "tfstate1749154418"
+    storage_account_name = "tfstate1749162202"
     container_name       = "tfstate"
     resource_group_name  = "rg-terraform-state"
     key                  = "prod/terraform.tfstate"
@@ -19,11 +19,6 @@ provider "azurerm" {
   features {}
 }
 
-# Data source to reference existing resource group (when not creating new one)
-data "azurerm_resource_group" "existing" {
-  count = var.create_resource_group ? 0 : 1
-  name  = var.existing_resource_group_name
-}
 
 # Conditionally create resource group
 module "resource_group" {
