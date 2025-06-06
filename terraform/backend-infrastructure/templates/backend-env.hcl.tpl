@@ -1,4 +1,0 @@
-storage_account_name = "${storage_account_name}"
-container_name      = "${container_name}"
-resource_group_name = "${resource_group_name}"
-key                = "${key}"

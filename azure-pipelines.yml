@@ -27,13 +27,8 @@ parameters:
       - prod
 
 variables:
-  # Terraform version
-  TERRAFORM_VERSION: '1.6.6'
-  
-  # Azure service connection (configure in Azure DevOps)
+
   AZURE_SERVICE_CONNECTION: 'EcommerceConnection'
-  
-  # Terraform state storage (update with your actual values)
   TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'tfstate1749162202'
   TERRAFORM_BACKEND_CONTAINER: 'tfstate'
   TERRAFORM_BACKEND_RESOURCE_GROUP: 'rg-terraform-state'
@@ -51,16 +46,18 @@ stages:
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: 'latest'
+
           - task: TerraformTask@5
             inputs:
               provider: 'azurerm'
               command: 'init'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
+              # These backend parameters are correct for init
               backendServiceArm: $(AZURE_SERVICE_CONNECTION)
               backendAzureRmResourceGroupName: $(TERRAFORM_BACKEND_RESOURCE_GROUP)
               backendAzureRmStorageAccountName: $(TERRAFORM_BACKEND_STORAGE_ACCOUNT)
               backendAzureRmContainerName: $(TERRAFORM_BACKEND_CONTAINER)
-              backendAzureRmKey: 'dev.terraform.tfstate'
+              backendAzureRmKey: '${{ parameters.environment }}.terraform.tfstate' # Corrected for dynamic key
 
           - task: TerraformTask@5
             displayName: 'plan'
@@ -68,20 +65,28 @@ stages:
               provider: 'azurerm'
               command: 'plan'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
-              
+              # This is the crucial change: Use backendServiceArm for authentication
+              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+              # Also, ensure you pass the -out for the plan, good practice for apply later
+              commandOptions: '-out=$(Pipeline.Workspace)/${{ parameters.environment }}.tfplan'
+
+
           - task: TerraformTask@5
             displayName: 'validate'
             inputs:
               provider: 'azurerm'
               command: 'validate'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
-              
+              # Use backendServiceArm here too
+              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+
           - task: TerraformTask@5
             displayName: 'apply'
             inputs:
               provider: 'azurerm'
               command: 'apply'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
+              # Use backendServiceArm here too
+              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+              # Specify the plan file created in the plan step
+              commandOptions: '$(Pipeline.Workspace)/${{ parameters.environment }}.tfplan'
