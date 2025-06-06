@@ -21,7 +21,7 @@ variables:
   TERRAFORM_VERSION: '1.6.6'
   
   # Azure service connection (configure in Azure DevOps)
-  AZURE_SERVICE_CONNECTION: 'azure-service-connection'
+  AZURE_SERVICE_CONNECTION: 'EcommerceConnection'
   
   # Terraform state storage (update with your actual values)
   TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'tfstate1749154418'
