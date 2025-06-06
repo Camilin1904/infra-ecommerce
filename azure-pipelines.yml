@@ -16,6 +16,16 @@ pr:
     include:
       - terraform/
 
+parameters:
+  - name: environment
+    displayName: 'Selecciona un entorno'
+    type: string
+    default: dev
+    values:
+      - dev
+      - stage
+      - prod
+
 variables:
   # Terraform version
   TERRAFORM_VERSION: '1.6.6'
@@ -51,7 +61,8 @@ stages:
               backendAzureRmStorageAccountName: $(TERRAFORM_BACKEND_STORAGE_ACCOUNT)
               backendAzureRmContainerName: $(TERRAFORM_BACKEND_CONTAINER)
               backendAzureRmKey: 'dev.terraform.tfstate'
-  - stage: Deploy ${{ parameters.environment }}
+
+  - stage: Deploy
     displayName: 'Deploy ${{ parameters.environment }}'
     jobs:
       - job: apply
@@ -63,18 +74,18 @@ stages:
               provider: 'azurerm'
               command: 'plan'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: 'ecommerce-terraform-sc'
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               
           - task: TerraformTask@5
             inputs:
               provider: 'azurerm'
               command: 'validate'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: 'ecommerce-terraform-sc'
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               
           - task: TerraformTask@5
             inputs:
               provider: 'azurerm'
               command: 'apply'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              environmentServiceNameAzureRM: 'ecommerce-terraform-sc'
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
