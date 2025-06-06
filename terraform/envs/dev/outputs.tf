@@ -1,6 +1,6 @@
 output "resource_group_id" {
   description = "The ID of the resource group"
-  value       = var.create_resource_group ? module.resource_group[0].id : data.azurerm_resource_group.existing[0].id
+  value       =  module.resource_group[0].id
 }
 
 output "resource_group_name" {
