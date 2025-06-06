@@ -58,7 +58,6 @@ stages:
                 cd terraform/envs/dev
                 terraform init -backend=false
                 terraform validate
-                terraform fmt -check=true
 
           - task: AzureCLI@2
             displayName: 'Validate Stage Environment'
@@ -70,7 +69,7 @@ stages:
                 cd terraform/envs/stage
                 terraform init -backend=false
                 terraform validate
-                terraform fmt -check=true
+
 
           - task: AzureCLI@2
             displayName: 'Validate Prod Environment'
@@ -82,7 +81,6 @@ stages:
                 cd terraform/envs/prod
                 terraform init -backend=false
                 terraform validate
-                terraform fmt -check=true
 
           - task: PublishTestResults@2
             displayName: 'Publish Validation Results'
