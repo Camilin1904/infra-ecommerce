@@ -62,14 +62,8 @@ stages:
               backendAzureRmContainerName: $(TERRAFORM_BACKEND_CONTAINER)
               backendAzureRmKey: 'dev.terraform.tfstate'
 
-  - stage: Deploy
-    displayName: 'Deploy ${{ parameters.environment }}'
-    jobs:
-      - job: apply
-        pool: 
-          vmImage: 'ubuntu-latest'
-        steps:
           - task: TerraformTask@5
+            displayName: 'plan'
             inputs:
               provider: 'azurerm'
               command: 'plan'
@@ -77,6 +71,7 @@ stages:
               environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               
           - task: TerraformTask@5
+            displayName: 'validate'
             inputs:
               provider: 'azurerm'
               command: 'validate'
@@ -84,6 +79,7 @@ stages:
               environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               
           - task: TerraformTask@5
+            displayName: 'apply'
             inputs:
               provider: 'azurerm'
               command: 'apply'
