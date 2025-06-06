@@ -54,7 +54,14 @@ stages:
               azureSubscription: $(AZURE_SERVICE_CONNECTION)
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
+              addSpnToEnvironment: true
               inlineScript: |
+                # Set environment variables for Terraform Service Principal authentication
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_CLIENT_SECRET=$servicePrincipalKey
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                
                 cd terraform/envs/dev
                 terraform init -backend=false
                 terraform validate
@@ -65,7 +72,14 @@ stages:
               azureSubscription: $(AZURE_SERVICE_CONNECTION)
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
+              addSpnToEnvironment: true
               inlineScript: |
+                # Set environment variables for Terraform Service Principal authentication
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_CLIENT_SECRET=$servicePrincipalKey
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                
                 cd terraform/envs/stage
                 terraform init -backend=false
                 terraform validate
@@ -77,7 +91,14 @@ stages:
               azureSubscription: $(AZURE_SERVICE_CONNECTION)
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
+              addSpnToEnvironment: true
               inlineScript: |
+                # Set environment variables for Terraform Service Principal authentication
+                export ARM_CLIENT_ID=$servicePrincipalId
+                export ARM_CLIENT_SECRET=$servicePrincipalKey
+                export ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                
                 cd terraform/envs/prod
                 terraform init -backend=false
                 terraform validate
@@ -154,7 +175,14 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     workingDirectory: 'terraform/envs/dev'
+                    addSpnToEnvironment: true
                     inlineScript: |
+                      # Set environment variables for Terraform Service Principal authentication
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_CLIENT_SECRET=$servicePrincipalKey
+                      export ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      
                       terraform init \
                         -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
                         -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
@@ -168,7 +196,14 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     workingDirectory: 'terraform/envs/dev'
+                    addSpnToEnvironment: true
                     inlineScript: |
+                      # Set environment variables for Terraform Service Principal authentication
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_CLIENT_SECRET=$servicePrincipalKey
+                      export ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      
                       # Create terraform.tfvars for automated deployment
                       cat > terraform.tfvars << EOF
                       create_resource_group = true
@@ -184,7 +219,14 @@ stages:
                     scriptType: 'bash'
                     scriptLocation: 'inlineScript'
                     workingDirectory: 'terraform/envs/dev'
+                    addSpnToEnvironment: true
                     inlineScript: |
+                      # Set environment variables for Terraform Service Principal authentication
+                      export ARM_CLIENT_ID=$servicePrincipalId
+                      export ARM_CLIENT_SECRET=$servicePrincipalKey
+                      export ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      
                       terraform apply -auto-approve tfplan-dev
 
                 - task: AzureCLI@2

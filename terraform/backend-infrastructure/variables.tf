@@ -16,7 +16,7 @@ variable "state_storage_account_prefix" {
   description = "Prefix for the storage account name (will be suffixed with random numbers)"
   type        = string
   default     = "tfstate"
-  
+
   validation {
     condition     = length(var.state_storage_account_prefix) <= 14
     error_message = "Storage account prefix must be 14 characters or less to allow for random suffix."
@@ -33,7 +33,7 @@ variable "storage_replication_type" {
   description = "Type of replication for the storage account"
   type        = string
   default     = "LRS"
-  
+
   validation {
     condition     = contains(["LRS", "GRS", "RAGRS", "ZRS", "GZRS", "RAGZRS"], var.storage_replication_type)
     error_message = "Storage replication type must be one of: LRS, GRS, RAGRS, ZRS, GZRS, RAGZRS."
@@ -44,7 +44,7 @@ variable "state_retention_days" {
   description = "Number of days to retain deleted state files and versions"
   type        = number
   default     = 30
-  
+
   validation {
     condition     = var.state_retention_days >= 1 && var.state_retention_days <= 365
     error_message = "State retention days must be between 1 and 365."

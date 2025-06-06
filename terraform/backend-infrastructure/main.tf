@@ -55,21 +55,21 @@ resource "azurerm_storage_account" "terraform_state" {
   location                 = azurerm_resource_group.terraform_state.location
   account_tier             = "Standard"
   account_replication_type = var.storage_replication_type
-  
+
   # Security configurations
-  enable_https_traffic_only      = true
-  min_tls_version               = "TLS1_2"
+  enable_https_traffic_only       = true
+  min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
-  
+
   # Versioning and soft delete for state file protection
   blob_properties {
     versioning_enabled  = true
     change_feed_enabled = true
-    
+
     delete_retention_policy {
       days = var.state_retention_days
     }
-    
+
     container_delete_retention_policy {
       days = var.state_retention_days
     }
@@ -97,12 +97,12 @@ resource "azurerm_storage_management_policy" "terraform_state" {
   rule {
     name    = "terraform-state-lifecycle"
     enabled = true
-    
+
     filters {
       prefix_match = [var.state_container_name]
       blob_types   = ["blockBlob"]
     }
-    
+
     actions {
       base_blob {
         # Move to cool storage after 30 days
@@ -110,7 +110,7 @@ resource "azurerm_storage_management_policy" "terraform_state" {
         # Move to archive after 90 days
         tier_to_archive_after_days_since_modification_greater_than = 90
       }
-      
+
       version {
         # Delete old versions after retention period
         delete_after_days_since_creation = var.state_retention_days
@@ -132,9 +132,9 @@ resource "local_file" "backend_config" {
   filename = "${path.root}/backend-config.txt"
   content = templatefile("${path.module}/templates/backend-config.txt.tpl", {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    location           = azurerm_resource_group.terraform_state.location
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    location             = azurerm_resource_group.terraform_state.location
   })
 }
 
@@ -143,9 +143,9 @@ resource "local_file" "backend_dev" {
   filename = "${path.root}/backend-configs/backend-dev.hcl"
   content = templatefile("${path.module}/templates/backend-env.hcl.tpl", {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "dev/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "dev/terraform.tfstate"
   })
 }
 
@@ -153,9 +153,9 @@ resource "local_file" "backend_stage" {
   filename = "${path.root}/backend-configs/backend-stage.hcl"
   content = templatefile("${path.module}/templates/backend-env.hcl.tpl", {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "stage/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "stage/terraform.tfstate"
   })
 }
 
@@ -163,8 +163,8 @@ resource "local_file" "backend_prod" {
   filename = "${path.root}/backend-configs/backend-prod.hcl"
   content = templatefile("${path.module}/templates/backend-env.hcl.tpl", {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "prod/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "prod/terraform.tfstate"
   })
 }

@@ -46,8 +46,8 @@ output "backend_config" {
   description = "Backend configuration for terraform init"
   value = {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
   }
 }
 
@@ -55,9 +55,9 @@ output "backend_config_dev" {
   description = "Backend configuration for development environment"
   value = {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "dev/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "dev/terraform.tfstate"
   }
 }
 
@@ -65,9 +65,9 @@ output "backend_config_stage" {
   description = "Backend configuration for staging environment"
   value = {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "stage/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "stage/terraform.tfstate"
   }
 }
 
@@ -75,16 +75,16 @@ output "backend_config_prod" {
   description = "Backend configuration for production environment"
   value = {
     storage_account_name = azurerm_storage_account.terraform_state.name
-    container_name      = azurerm_storage_container.terraform_state.name
-    resource_group_name = azurerm_resource_group.terraform_state.name
-    key                = "prod/terraform.tfstate"
+    container_name       = azurerm_storage_container.terraform_state.name
+    resource_group_name  = azurerm_resource_group.terraform_state.name
+    key                  = "prod/terraform.tfstate"
   }
 }
 
 # Instructions for using the backend
 output "usage_instructions" {
   description = "Instructions for using the created backend"
-  value = <<-EOT
+  value       = <<-EOT
     Backend created successfully!
     
     To use this backend in your Terraform configurations:

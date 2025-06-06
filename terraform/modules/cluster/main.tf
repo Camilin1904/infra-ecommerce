@@ -31,19 +31,19 @@ resource "azurerm_kubernetes_cluster" "aks" {
     name       = "default"
     node_count = var.node_count
     vm_size    = var.vm_size
-    
+
     # Enable auto-scaling
     enable_auto_scaling = var.enable_auto_scaling
-    min_count          = var.enable_auto_scaling ? var.min_node_count : null
-    max_count          = var.enable_auto_scaling ? var.max_node_count : null
-    
+    min_count           = var.enable_auto_scaling ? var.min_node_count : null
+    max_count           = var.enable_auto_scaling ? var.max_node_count : null
+
     # Network configuration
     vnet_subnet_id = var.subnet_id
-    
+
     # Node configuration
     os_disk_size_gb = var.os_disk_size_gb
     os_disk_type    = var.os_disk_type
-    
+
     tags = var.tags
   }
 
@@ -101,19 +101,19 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
 
   name                  = each.key
   kubernetes_cluster_id = azurerm_kubernetes_cluster.aks.id
-  vm_size              = each.value.vm_size
-  node_count           = each.value.node_count
-  
+  vm_size               = each.value.vm_size
+  node_count            = each.value.node_count
+
   # Auto-scaling
   enable_auto_scaling = each.value.enable_auto_scaling
-  min_count          = each.value.enable_auto_scaling ? each.value.min_count : null
-  max_count          = each.value.enable_auto_scaling ? each.value.max_count : null
-  
+  min_count           = each.value.enable_auto_scaling ? each.value.min_count : null
+  max_count           = each.value.enable_auto_scaling ? each.value.max_count : null
+
   # Node configuration
   os_disk_size_gb = each.value.os_disk_size_gb
   os_disk_type    = each.value.os_disk_type
   vnet_subnet_id  = var.subnet_id
-  
+
   # Node labels and taints
   node_labels = each.value.node_labels
   node_taints = each.value.node_taints
