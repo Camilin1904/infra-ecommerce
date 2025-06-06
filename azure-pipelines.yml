@@ -52,12 +52,12 @@ stages:
               provider: 'azurerm'
               command: 'init'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              # These backend parameters are correct for init
-              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+              # These backend parameters are correct for init, including the service connection for backend auth
+              backendServiceArm: $(AZURE_SERVICE_CONNECTION) # Used for authenticating to the backend storage account
               backendAzureRmResourceGroupName: $(TERRAFORM_BACKEND_RESOURCE_GROUP)
               backendAzureRmStorageAccountName: $(TERRAFORM_BACKEND_STORAGE_ACCOUNT)
               backendAzureRmContainerName: $(TERRAFORM_BACKEND_CONTAINER)
-              backendAzureRmKey: '${{ parameters.environment }}.terraform.tfstate' # Corrected for dynamic key
+              backendAzureRmKey: '${{ parameters.environment }}.terraform.tfstate'
 
           - task: TerraformTask@5
             displayName: 'plan'
@@ -65,9 +65,8 @@ stages:
               provider: 'azurerm'
               command: 'plan'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              # This is the crucial change: Use backendServiceArm for authentication
-              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
-              # Also, ensure you pass the -out for the plan, good practice for apply later
+              # THIS IS THE CORRECT PARAMETER FOR PROVIDER AUTH IN PLAN/VALIDATE/APPLY
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               commandOptions: '-out=$(Pipeline.Workspace)/${{ parameters.environment }}.tfplan'
 
 
@@ -77,8 +76,8 @@ stages:
               provider: 'azurerm'
               command: 'validate'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              # Use backendServiceArm here too
-              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+              # THIS IS THE CORRECT PARAMETER FOR PROVIDER AUTH
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
 
           - task: TerraformTask@5
             displayName: 'apply'
@@ -86,7 +85,6 @@ stages:
               provider: 'azurerm'
               command: 'apply'
               workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-              # Use backendServiceArm here too
-              backendServiceArm: $(AZURE_SERVICE_CONNECTION)
-              # Specify the plan file created in the plan step
+              # THIS IS THE CORRECT PARAMETER FOR PROVIDER AUTH
+              environmentServiceNameAzureRM: $(AZURE_SERVICE_CONNECTION)
               commandOptions: '$(Pipeline.Workspace)/${{ parameters.environment }}.tfplan'
