@@ -17,13 +17,6 @@ terraform {
 
 provider "azurerm" {
   features {}
-
-  # For Azure DevOps Service Principal authentication
-  # These will be automatically set by Azure DevOps when using AzureCLI@2 task
-  use_cli                    = false
-  use_msi                    = false
-  use_oidc                   = false
-  skip_provider_registration = false
 }
 
 # Conditionally create resource group
