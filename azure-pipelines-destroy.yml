@@ -1,10 +1,9 @@
 trigger: none
-
 pr: none
 
 parameters:
   - name: environment
-    displayName: 'Environment to destroy'
+    displayName: 'Entorno a destruir'
     type: string
     default: 'dev'
     values:
@@ -68,66 +67,20 @@ stages:
                   inputs:
                     terraformVersion: $(TERRAFORM_VERSION)
 
-                - task: AzureCLI@2
-                  displayName: 'Terraform Init'
+                - task: TerraformTask@5
                   inputs:
-                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
+                    provider: 'azurerm'
+                    command: 'init'
                     workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-                    inlineScript: |
-                      terraform init \
-                        -backend-config="storage_account_name=$(TERRAFORM_BACKEND_STORAGE_ACCOUNT)" \
-                        -backend-config="container_name=$(TERRAFORM_BACKEND_CONTAINER)" \
-                        -backend-config="resource_group_name=$(TERRAFORM_BACKEND_RESOURCE_GROUP)" \
-                        -backend-config="key=${{ parameters.environment }}/terraform.tfstate"
-
-                - task: AzureCLI@2
-                  displayName: 'Terraform Plan Destroy'
+                    backendServiceArm: $(AZURE_SERVICE_CONNECTION)
+                    backendAzureRmResourceGroupName: $(TERRAFORM_BACKEND_RESOURCE_GROUP)
+                    backendAzureRmStorageAccountName: $(TERRAFORM_BACKEND_STORAGE_ACCOUNT)
+                    backendAzureRmContainerName: $(TERRAFORM_BACKEND_CONTAINER)
+                    backendAzureRmKey: '${{ parameters.environment }}.terraform.tfstate'
+                
+                - task: TerraformTask@5
                   inputs:
-                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
+                    provider: 'azurerm'
+                    command: 'destroy'
+                    environmentServiceNameAzureRM: 'ecommerce-connection-manual'
                     workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-                    inlineScript: |
-                      # Create terraform.tfvars if it doesn't exist
-                      if [ ! -f terraform.tfvars ]; then
-                        cat > terraform.tfvars << EOF
-                      create_resource_group = true
-                      resource_group_location = "East US"
-                      EOF
-                      fi
-                      
-                      terraform plan -destroy -out=tfplan-destroy-${{ parameters.environment }}
-                      
-                      echo "=== DESTROY PLAN FOR ${{ parameters.environment }} ==="
-                      terraform show tfplan-destroy-${{ parameters.environment }}
-
-                - task: AzureCLI@2
-                  displayName: 'Terraform Destroy'
-                  inputs:
-                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    workingDirectory: 'terraform/envs/${{ parameters.environment }}'
-                    inlineScript: |
-                      echo "Starting destruction of ${{ parameters.environment }} environment..."
-                      terraform apply -auto-approve tfplan-destroy-${{ parameters.environment }}
-                      echo "${{ parameters.environment }} environment destroyed successfully!"
-
-                - task: AzureCLI@2
-                  displayName: 'Cleanup State File'
-                  condition: succeededOrFailed()
-                  inputs:
-                    azureSubscription: $(AZURE_SERVICE_CONNECTION)
-                    scriptType: 'bash'
-                    scriptLocation: 'inlineScript'
-                    inlineScript: |
-                      # Optional: Remove the state file after successful destroy
-                      # Uncomment the following lines if you want to clean up the state file
-                      # az storage blob delete \
-                      #   --account-name $(TERRAFORM_BACKEND_STORAGE_ACCOUNT) \
-                      #   --container-name $(TERRAFORM_BACKEND_CONTAINER) \
-                      #   --name "${{ parameters.environment }}/terraform.tfstate" \
-                      #   --auth-mode login
-                      echo "Destroy operation completed for ${{ parameters.environment }}"
