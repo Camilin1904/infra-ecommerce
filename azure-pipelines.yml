@@ -28,7 +28,7 @@ parameters:
 
 variables:
 
-  AZURE_SERVICE_CONNECTION: 'EcommerceConnection'
+  AZURE_SERVICE_CONNECTION: 'ecommerce-connection'
   TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'tfstate1749162202'
   TERRAFORM_BACKEND_CONTAINER: 'tfstate'
   TERRAFORM_BACKEND_RESOURCE_GROUP: 'rg-terraform-state'
