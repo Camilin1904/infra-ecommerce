@@ -54,7 +54,7 @@ stages:
         displayName: 'Destroy ${{ parameters.environment }} Infrastructure'
         pool:
           vmImage: 'ubuntu-latest'
-        environment: '${{ parameters.environment }}'
+        environment: 'dev-destroy'
         strategy:
           runOnce:
             deploy:
