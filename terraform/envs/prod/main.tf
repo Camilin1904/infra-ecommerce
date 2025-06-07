@@ -38,53 +38,26 @@ module "aks_cluster" {
   dns_prefix          = "aks-ecommerce-prod"
 
 
-  # Production node pool configuration - high availability
-  node_count          = 5
-  vm_size             = "Standard_D8s_v3"
+  node_count          = 2
+  vm_size             = "Standard_D2s_v3"
   enable_auto_scaling = true
-  min_node_count      = 3
-  max_node_count      = 20
+  min_node_count      = 1
+  max_node_count      = 5
 
-  # Network configuration for production
   network_plugin = "azure"
   network_policy = "azure"
-  service_cidr   = "10.2.0.0/16"
-  dns_service_ip = "10.2.0.10"
+  service_cidr   = "10.0.0.0/16"
+  dns_service_ip = "10.0.0.10"
 
-  # Monitoring and logging - extended retention for production
   enable_log_analytics = true
-  log_retention_days   = 90
+  log_retention_days   = 30
 
-  # Production-specific settings - enhanced security
-  enable_azure_policy             = true
+  enable_azure_policy             = false
   enable_http_application_routing = false
 
-  # Additional node pools for production workloads
-  additional_node_pools = {
-    "compute" = {
-      vm_size             = "Standard_D16s_v3"
-      node_count          = 3
-      enable_auto_scaling = true
-      min_count           = 2
-      max_count           = 10
-      os_disk_size_gb     = 100
-      os_disk_type        = "Managed"
-      node_labels = {
-        "workload-type" = "compute-intensive"
-        "environment"   = "production"
-      }
-      node_taints = []
-      tags = {
-        "NodePool"    = "compute"
-        "Environment" = "production"
-      }
-    }
-  }
-
-  # Maintenance window (Sunday very early morning)
   maintenance_window = {
     day   = "Sunday"
-    hours = [1, 2]
+    hours = [2, 3]
   }
 
   tags = {

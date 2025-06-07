@@ -45,28 +45,23 @@ module "aks_cluster" {
   dns_prefix          = "aks-ecommerce-dev"
 
 
-  # Default node pool configuration
   node_count          = 2
   vm_size             = "Standard_D2s_v3"
   enable_auto_scaling = true
   min_node_count      = 1
   max_node_count      = 5
 
-  # Network configuration for development
   network_plugin = "azure"
   network_policy = "azure"
   service_cidr   = "10.0.0.0/16"
   dns_service_ip = "10.0.0.10"
 
-  # Monitoring and logging
   enable_log_analytics = true
   log_retention_days   = 30
 
-  # Development-specific settings
   enable_azure_policy             = false
   enable_http_application_routing = false
 
-  # Maintenance window (Sunday early morning)
   maintenance_window = {
     day   = "Sunday"
     hours = [2, 3]

@@ -6,7 +6,7 @@ provider "azurerm" {
   }
 }
 
-# Conditionally create resource group
+
 module "resource_group" {
   count  = var.create_resource_group ? 1 : 0
   source = "../../modules/resource_group"
@@ -21,7 +21,7 @@ module "resource_group" {
   }
 }
 
-# Local values to handle resource group reference
+
 locals {
   resource_group_name     = module.resource_group[0].name
   resource_group_location = module.resource_group[0].location
@@ -36,31 +36,27 @@ module "aks_cluster" {
   dns_prefix          = "aks-ecommerce-stage"
 
 
-  # Staging node pool configuration - slightly more robust than dev
-  node_count          = 3
-  vm_size             = "Standard_D4s_v3"
-  enable_auto_scaling = true
-  min_node_count      = 2
-  max_node_count      = 8
 
-  # Network configuration for staging
+  node_count          = 2
+  vm_size             = "Standard_D2s_v3"
+  enable_auto_scaling = true
+  min_node_count      = 1
+  max_node_count      = 5
+
   network_plugin = "azure"
   network_policy = "azure"
-  service_cidr   = "10.1.0.0/16"
-  dns_service_ip = "10.1.0.10"
+  service_cidr   = "10.0.0.0/16"
+  dns_service_ip = "10.0.0.10"
 
-  # Monitoring and logging
   enable_log_analytics = true
-  log_retention_days   = 60
+  log_retention_days   = 30
 
-  # Staging-specific settings
-  enable_azure_policy             = true
+  enable_azure_policy             = false
   enable_http_application_routing = false
 
-  # Maintenance window (Saturday early morning)
   maintenance_window = {
-    day   = "Saturday"
-    hours = [3, 4]
+    day   = "Sunday"
+    hours = [2, 3]
   }
 
   tags = {
