@@ -36,7 +36,6 @@ module "aks_cluster" {
   location            = local.resource_group_location
   resource_group_name = local.resource_group_name
   dns_prefix          = "aks-ecommerce-prod"
-  kubernetes_version  = "1.27.3"
 
 
   # Production node pool configuration - high availability
