@@ -28,7 +28,7 @@ parameters:
 
 variables:
 
-  AZURE_SERVICE_CONNECTION: 'ecommerce-connection'
+  AZURE_SERVICE_CONNECTION: 'ecommerce-connection-manual'
   TERRAFORM_BACKEND_STORAGE_ACCOUNT: 'tfstate1749162202'
   TERRAFORM_BACKEND_CONTAINER: 'tfstate'
   TERRAFORM_BACKEND_RESOURCE_GROUP: 'rg-terraform-state'
@@ -46,6 +46,7 @@ stages:
           - task: TerraformInstaller@1
             inputs:
               terraformVersion: 'latest'
+
 
           - task: TerraformTask@5
             inputs:
