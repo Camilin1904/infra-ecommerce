@@ -73,7 +73,7 @@ module "aks_cluster" {
 
 data "azurerm_container_registry" "my_acr" {
   name                = "ecommerceRegistry" 
-  resource_group_name = "rg-container-state"  
+  resource_group_name = "rg-terraform-state"  
 }
 
 resource "azurerm_role_assignment" "aks_acr_pull_permission" {
