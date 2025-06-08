@@ -75,9 +75,3 @@ data "azurerm_container_registry" "my_acr" {
   name                = "ecommerceRegistry" 
   resource_group_name = "rg-terraform-state"  
 }
-
-resource "azurerm_role_assignment" "aks_acr_pull_permission" {
-  scope                = data.azurerm_container_registry.my_acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = module.aks_cluster.cluster_id
-}
