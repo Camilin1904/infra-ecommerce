@@ -70,3 +70,14 @@ module "aks_cluster" {
     BackupRequired = "true"
   }
 }
+
+data "azurerm_container_registry" "my_acr" {
+  name                = "ecommercerRegistry" 
+  resource_group_name = "rg-container-state"  
+}
+
+resource "azurerm_role_assignment" "aks_acr_pull_permission" {
+  scope                = data.azurerm_container_registry.my_acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = module.aks_cluster.kubelet_identity_principal_id
+}
