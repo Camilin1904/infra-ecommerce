@@ -79,5 +79,5 @@ data "azurerm_container_registry" "my_acr" {
 resource "azurerm_role_assignment" "aks_acr_pull_permission" {
   scope                = data.azurerm_container_registry.my_acr.id
   role_definition_name = "AcrPull"
-  principal_id         = module.aks_cluster.kubelet_identity_principal_id
+  principal_id         = module.aks_cluster.cluster_id
 }
