@@ -77,7 +77,7 @@ module "aks_cluster" {
 }
 
 data "azurerm_container_registry" "my_acr" {
-  name                = "ecommercerRegistry" 
+  name                = "ecommerceRegistry" 
   resource_group_name = "rg-container-state"   
 }
 
